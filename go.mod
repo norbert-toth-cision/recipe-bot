@@ -1,4 +1,4 @@
-module my-first/hello
+module recipebot
 
 go 1.22.3
 

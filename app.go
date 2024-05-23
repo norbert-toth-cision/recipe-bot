@@ -3,9 +3,9 @@ package main
 import (
 	"github.com/bwmarrin/discordgo"
 	"log"
-	"my-first/hello/bot"
 	"os"
 	"os/signal"
+	"recipebot/bot"
 )
 
 const TokenVarName = "BOT_TOKEN"
