@@ -2,13 +2,17 @@ package main
 
 import (
 	"github.com/bwmarrin/discordgo"
+	"github.com/spf13/viper"
 	"log"
 	"os"
 	"os/signal"
 	"recipebot/bot"
 )
 
-const TokenVarName = "BOT_TOKEN"
+const (
+	TokenVarName = "BOT_TOKEN"
+	ConfigFile   = ".env"
+)
 
 func main() {
 	token := obtainTokenOrFail()
@@ -35,7 +39,13 @@ func onErrorFatal(e error) {
 }
 
 func obtainTokenOrFail() string {
-	var token = os.Getenv(TokenVarName)
+	viper.SetConfigFile(".env")
+	err := viper.ReadInConfig()
+	if err != nil {
+		log.Fatal("Could not read config file: ", ConfigFile)
+	}
+
+	token := viper.GetString(TokenVarName)
 	if token == "" {
 		log.Fatal("Environment variable ", TokenVarName, " has no value")
 	}
