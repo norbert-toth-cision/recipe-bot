@@ -1,26 +1,34 @@
 package main
 
 import (
-	"github.com/bwmarrin/discordgo"
+	"github.com/spf13/viper"
 	"log"
 	"os"
 	"os/signal"
 	"recipebot/bot"
-	"recipebot/config"
+)
+
+const (
+	ConfigFile = ".env"
 )
 
 func main() {
-	discord, err := discordgo.New("Bot " + config.GetConfig(config.BotToken))
+	vConfig := viper.New()
+	vConfig.SetConfigFile(ConfigFile)
+	err := vConfig.ReadInConfig()
 	onErrorFatal(err)
 
-	discord.AddHandler(bot.OnNewMessage)
-	err = discord.Open()
+	var recipeBot bot.Bot
+	recipeBot = new(bot.RecipeBot)
+	err = recipeBot.Configure(vConfig)
+	onErrorFatal(err)
+	err = recipeBot.Start()
 	onErrorFatal(err)
 
-	defer func(discord *discordgo.Session) {
-		err := discord.Close()
+	defer func() {
+		err := recipeBot.Stop()
 		onErrorFatal(err)
-	}(discord)
+	}()
 
 	log.Println("Bot started")
 	listenInterrupt()

@@ -4,6 +4,7 @@ go 1.22.3
 
 require (
 	github.com/bwmarrin/discordgo v0.28.1
+	github.com/rabbitmq/amqp091-go v1.10.0
 	github.com/spf13/viper v1.18.2
 )
 

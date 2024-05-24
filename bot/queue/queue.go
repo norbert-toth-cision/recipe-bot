@@ -1,11 +1,9 @@
 package queue
 
-import (
-	"log"
-	"recipebot/config"
-)
+import "recipebot/config"
 
-func PushIntoQueue(message interface{}) {
-
-	log.Println("pushing message ", message, " to ", config.GetConfig(config.Other))
+type Queue interface {
+	Configure(config.Config)
+	SendMessage(interface{})
+	Close() error
 }
