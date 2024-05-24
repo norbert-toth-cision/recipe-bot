@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/bwmarrin/discordgo"
 	"log"
+	"recipebot/queue"
 	"recipebot/urlextract"
 )
 
@@ -19,15 +20,25 @@ func respondStatus(discord *discordgo.Session, message *discordgo.MessageCreate,
 	var response string
 	for range count {
 		result := <-results
-		if result.UrlType != urlextract.NONE {
-			response += fmt.Sprintf("- %s: %s\n", result.UrlType, result.MatchedUrl.Hostname())
-		}
+		response += reportResult(result)
+		queue.PushIntoQueue(result)
 	}
-	if response == "" {
+	sendReport(discord, message.ChannelID, response)
+}
+
+func reportResult(result urlextract.WordResult) string {
+	if result.UrlType != urlextract.NONE {
+		return fmt.Sprintf("- %s: %s\n", result.UrlType, result.MatchedUrl.Hostname())
+	}
+	return ""
+}
+
+func sendReport(discord *discordgo.Session, channelId string, report string) {
+	if report == "" {
 		return
 	}
-	response = "Found URL(s):\n" + response
-	_, err := discord.ChannelMessageSend(message.ChannelID, response)
+	report = "Found URL(s):\n" + report
+	_, err := discord.ChannelMessageSend(channelId, report)
 	if err != nil {
 		log.Println("Error when sending response: ", err)
 	}
