@@ -81,6 +81,7 @@ func (queue *RMQueue) SendMessage(message interface{}) {
 }
 
 func (queue *RMQueue) Close() error {
+	log.Println("Disconnecting RabbitMQ")
 	qErr := queue.channel.Close()
 	connErr := queue.rmqConn.Close()
 	return errors.Join(qErr, connErr)

@@ -8,6 +8,7 @@ import (
 	"os/signal"
 	"recipebot/bot"
 	"recipebot/config"
+	"syscall"
 )
 
 const (
@@ -53,6 +54,6 @@ func onErrorFatal(e error) {
 
 func listenInterrupt() {
 	c := make(chan os.Signal, 1)
-	signal.Notify(c, os.Interrupt)
+	signal.Notify(c, os.Interrupt, syscall.SIGTERM, syscall.SIGKILL)
 	<-c
 }
