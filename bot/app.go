@@ -17,6 +17,7 @@ func main() {
 	vConfig.SetConfigFile(ConfigFile)
 	err := vConfig.ReadInConfig()
 	onErrorFatal(err)
+	vConfig.AutomaticEnv()
 
 	var recipeBot bot.Bot
 	recipeBot = new(bot.RecipeBot)
