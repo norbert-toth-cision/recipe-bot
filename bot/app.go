@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/signal"
 	"recipebot/bot"
+	"recipebot/config"
 )
 
 const (
@@ -17,7 +18,9 @@ func main() {
 	vConfig := viper.New()
 	vConfig.SetConfigFile(ConfigFile)
 	err := vConfig.ReadInConfig()
-	onErrorFatal(err)
+	if err != nil {
+		log.Println("Failed to load", ConfigFile, ", using only system environment variables instead")
+	}
 	vConfig.AutomaticEnv()
 
 	var recipeBot bot.Bot
@@ -33,12 +36,12 @@ func main() {
 	}()
 
 	log.Println("Bot started")
-	listenMonitoring()
+	listenMonitoring(vConfig)
 	listenInterrupt()
 }
 
-func listenMonitoring() {
-	_, err := net.Listen("tcp", ":8300")
+func listenMonitoring(configs config.Config) {
+	_, err := net.Listen("tcp", ":"+configs.GetString(config.MONITORING_PORT))
 	onErrorFatal(err)
 }
 
