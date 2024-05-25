@@ -3,6 +3,7 @@ package main
 import (
 	"github.com/spf13/viper"
 	"log"
+	"net"
 	"os"
 	"os/signal"
 	"recipebot/bot"
@@ -32,7 +33,13 @@ func main() {
 	}()
 
 	log.Println("Bot started")
+	listenMonitoring()
 	listenInterrupt()
+}
+
+func listenMonitoring() {
+	_, err := net.Listen("tcp", ":8300")
+	onErrorFatal(err)
 }
 
 func onErrorFatal(e error) {
