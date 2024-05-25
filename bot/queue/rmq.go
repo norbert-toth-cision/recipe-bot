@@ -42,7 +42,7 @@ func (queue *RMQueue) Configure(configs config.Config) {
 	queue.channel = ch
 
 	q, err := queue.channel.QueueDeclare(
-		config.RABBITMQ_QUEUE_NAME, // name
+		configs.GetString(config.RABBITMQ_QUEUE_NAME),
 		false,
 		false,
 		false,
@@ -77,7 +77,7 @@ func (queue *RMQueue) SendMessage(message interface{}) {
 			Body:        jsonMsg,
 		})
 	failOnError(err, "Failed to publish a message")
-	log.Printf(" [x] Sent %s\n", jsonMsg)
+	log.Printf(" [x] Sent %s %s\n", queue.q.Name, jsonMsg)
 }
 
 func (queue *RMQueue) Close() error {
