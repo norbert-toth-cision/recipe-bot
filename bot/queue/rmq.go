@@ -8,64 +8,60 @@ import (
 	"github.com/rabbitmq/amqp091-go"
 	"log"
 	"net/url"
-	"recipebot/config"
+	"recipebot/environment"
 	"time"
-)
-
-const (
-	Name = "RabbitMQ"
 )
 
 type RMQueue struct {
 	rmqConn *amqp091.Connection
 	channel *amqp091.Channel
 	q       *amqp091.Queue
-	configs *config.Config
 }
 
-func (queue *RMQueue) Configure(configs config.Config) {
-	queue.configs = &configs
-	user := configs.GetString(config.RABBITMQ_USER)
-	password := url.QueryEscape(configs.GetString(config.RABBITMQ_PASSWORD))
-	host := configs.GetString(config.RABBITMQ_HOST)
-	port := configs.GetString(config.RABBITMQ_PORT)
-	virtHost := configs.GetString(config.RABBITMQ_VIRT_HOST)
-
-	connectionString := fmt.Sprintf("amqp://%s:%s@%s:%s/%s", user, password, host, port, virtHost)
+func (queue *RMQueue) Configure(config *environment.RmqConfig) error {
+	connectionString := fmt.Sprintf("amqp://%s:%s@%s:%d/%s",
+		config.User,
+		url.QueryEscape(config.Password),
+		config.Host,
+		config.Port,
+		config.VirtualHost)
 
 	conn, err := amqp091.Dial(connectionString)
-	failOnError(err, "Failed to connect to RabbitMQ")
+	if err != nil {
+		return err
+	}
 	queue.rmqConn = conn
 
 	ch, err := conn.Channel()
-	failOnError(err, "Failed to open a channel")
+	if err != nil {
+		return err
+	}
 	queue.channel = ch
 
 	q, err := queue.channel.QueueDeclare(
-		configs.GetString(config.RABBITMQ_QUEUE_NAME),
+		config.OutputQueue,
 		false,
 		false,
 		false,
 		false,
 		nil,
 	)
-	failOnError(err, "Failed to declare a queue")
-	queue.q = &q
-}
-
-func failOnError(err error, msg string) {
 	if err != nil {
-		log.Panicf("%s: %s", msg, err)
+		return err
 	}
+	queue.q = &q
+	return nil
 }
 
-func (queue *RMQueue) SendMessage(message interface{}) {
+func (queue *RMQueue) SendMessage(message interface{}) error {
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
 	jsonMsg, err := json.Marshal(message)
-	failOnError(err, "Unable to serialize message")
+	if err != nil {
+		return err
+	}
 
 	err = queue.channel.PublishWithContext(ctx,
 		"",
@@ -76,8 +72,11 @@ func (queue *RMQueue) SendMessage(message interface{}) {
 			ContentType: "application/json",
 			Body:        jsonMsg,
 		})
-	failOnError(err, "Failed to publish a message")
+	if err != nil {
+		return err
+	}
 	log.Printf(" [x] Sent %s %s\n", queue.q.Name, jsonMsg)
+	return err
 }
 
 func (queue *RMQueue) Close() error {

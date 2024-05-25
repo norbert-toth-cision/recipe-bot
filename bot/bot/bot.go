@@ -1,9 +1,9 @@
 package bot
 
-import "recipebot/config"
+import "recipebot/queue"
 
 type Bot interface {
-	Configure(config.Config) error
+	WithQueue(queue queue.Queue)
 	Start() error
 	Stop() error
 }

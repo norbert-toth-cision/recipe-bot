@@ -1,13 +1,14 @@
 package main
 
 import (
-	"github.com/spf13/viper"
+	"errors"
 	"log"
-	"net"
 	"os"
 	"os/signal"
 	"recipebot/bot"
-	"recipebot/config"
+	"recipebot/environment"
+	"recipebot/monitoring"
+	"recipebot/queue"
 	"syscall"
 )
 
@@ -16,34 +17,61 @@ const (
 )
 
 func main() {
-	vConfig := viper.New()
-	vConfig.SetConfigFile(ConfigFile)
-	err := vConfig.ReadInConfig()
-	if err != nil {
-		log.Println("Failed to load", ConfigFile, ", using only system environment variables instead")
-	}
-	vConfig.AutomaticEnv()
-
-	var recipeBot bot.Bot
-	recipeBot = new(bot.RecipeBot)
-	err = recipeBot.Configure(vConfig)
-	onErrorFatal(err)
-	err = recipeBot.Start()
-	onErrorFatal(err)
-
-	defer func() {
-		err := recipeBot.Stop()
+	appConfig := new(environment.VarOrFileEnvironment)
+	if err := appConfig.ReadIn(ConfigFile); err != nil {
 		onErrorFatal(err)
-	}()
+	}
+
+	recipeBot := createBot(appConfig.BotConfig)
+	if queue, err := createQueue(appConfig.RabbitMQConfig); err != nil {
+		onErrorFatal(err)
+	} else {
+		recipeBot.WithQueue(queue)
+	}
+
+	if err := recipeBot.Start(); err != nil {
+		graceFullyStopBotAndExit(recipeBot, err)
+	}
+
+	defer graceFullyStopBot(recipeBot)
 
 	log.Println("Bot started")
-	listenMonitoring(vConfig)
+
+	if err := createMonitor(appConfig.MonitoringConfig).Monitor(); err != nil {
+		graceFullyStopBotAndExit(recipeBot, err)
+	}
 	listenInterrupt()
 }
 
-func listenMonitoring(configs config.Config) {
-	_, err := net.Listen("tcp", ":"+configs.GetString(config.MONITORING_PORT))
+func createBot(botConfig *environment.RecipeBotConfig) bot.Bot {
+	recipeBot := new(bot.RecipeBot)
+	recipeBot.Configure(botConfig)
+	return recipeBot
+}
+
+func createQueue(config *environment.RmqConfig) (queue.Queue, error) {
+	rmq := new(queue.RMQueue)
+	if err := rmq.Configure(config); err != nil {
+		closeErr := rmq.Close()
+		return nil, errors.Join(err, closeErr)
+	}
+	return rmq, nil
+}
+
+func createMonitor(config *environment.SimpleActuatorConfig) monitoring.Monitor {
+	monitor := new(monitoring.SimpleMonitor)
+	monitor.Configure(config)
+	return monitor
+}
+
+func graceFullyStopBot(bot bot.Bot) {
+	err := bot.Stop()
 	onErrorFatal(err)
+}
+
+func graceFullyStopBotAndExit(bot bot.Bot, original error) {
+	err := bot.Stop()
+	onErrorFatal(errors.Join(original, err))
 }
 
 func onErrorFatal(e error) {

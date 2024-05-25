@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"github.com/bwmarrin/discordgo"
 	"log"
-	"recipebot/config"
+	"recipebot/environment"
 	"recipebot/queue"
 	"recipebot/urlextract"
 )
@@ -15,22 +15,26 @@ const (
 )
 
 type RecipeBot struct {
-	config   config.Config
+	config   *environment.RecipeBotConfig
 	session  *discordgo.Session
 	msgQueue queue.Queue
 }
 
-func (rb *RecipeBot) Configure(config config.Config) error {
+func (rb *RecipeBot) Configure(config *environment.RecipeBotConfig) {
 	rb.config = config
-	rb.msgQueue = new(queue.RMQueue)
-	rb.msgQueue.Configure(config)
-	return nil
+}
+
+func (rb *RecipeBot) WithQueue(queue queue.Queue) {
+	rb.msgQueue = queue
 }
 
 func (rb *RecipeBot) Start() error {
 	log.Println("Starting", Name)
+	if rb.msgQueue == nil {
+		return errors.New("no messageQueue configured")
+	}
 	var err error
-	rb.session, err = discordgo.New("Bot " + rb.config.GetString(config.BotToken))
+	rb.session, err = discordgo.New("Bot " + rb.config.BotToken)
 	if err != nil {
 		return err
 	}
@@ -64,7 +68,9 @@ func (rb *RecipeBot) respondStatus(discord *discordgo.Session, message *discordg
 		result := <-results
 		if result.UrlType != urlextract.NONE {
 			response += reportResult(result)
-			rb.msgQueue.SendMessage(result)
+			if err := rb.msgQueue.SendMessage(result); err != nil {
+				log.Println(err)
+			}
 		}
 	}
 	sendReport(discord, message.ChannelID, response)
