@@ -8,7 +8,6 @@ import (
 	"recipebot/bot"
 	"recipebot/environment"
 	"recipebot/monitoring"
-	"recipebot/queue"
 	"syscall"
 )
 
@@ -23,11 +22,6 @@ func main() {
 	}
 
 	recipeBot := createBot(appConfig.BotConfig)
-	if queue, err := createQueue(appConfig.RabbitMQConfig); err != nil {
-		onErrorFatal(err)
-	} else {
-		recipeBot.WithQueue(queue)
-	}
 
 	if err := recipeBot.Start(); err != nil {
 		graceFullyStopBotAndExit(recipeBot, err)
@@ -47,15 +41,6 @@ func createBot(botConfig *environment.RecipeBotConfig) bot.Bot {
 	recipeBot := new(bot.RecipeBot)
 	recipeBot.Configure(botConfig)
 	return recipeBot
-}
-
-func createQueue(config *environment.RmqConfig) (queue.Queue, error) {
-	rmq := new(queue.RMQueue)
-	if err := rmq.Configure(config); err != nil {
-		closeErr := rmq.Close()
-		return nil, errors.Join(err, closeErr)
-	}
-	return rmq, nil
 }
 
 func createMonitor(config *environment.SimpleActuatorConfig) monitoring.Monitor {

@@ -9,15 +9,10 @@ import (
 type VarOrFileEnvironment struct {
 	MonitoringConfig *SimpleActuatorConfig
 	BotConfig        *RecipeBotConfig
-	RabbitMQConfig   *RmqConfig
 }
 
 func (e *VarOrFileEnvironment) ReadIn(file string) error {
 	env := ReadConfigFromFileAndSystem(file)
-	e.RabbitMQConfig = new(RmqConfig)
-	if err := e.RabbitMQConfig.Load(env); err != nil {
-		return err
-	}
 
 	e.MonitoringConfig = new(SimpleActuatorConfig)
 	if err := e.MonitoringConfig.Load(env); err != nil {
