@@ -6,8 +6,10 @@ import (
 	"os"
 	"os/signal"
 	"recipebot/bot"
+	"recipebot/cloud"
 	"recipebot/environment"
 	"recipebot/monitoring"
+	"recipebot/urlProcessor"
 	"syscall"
 )
 
@@ -21,10 +23,13 @@ func main() {
 		onErrorFatal(err)
 	}
 
-	recipeBot := createBot(appConfig.BotConfig)
+	recipeBot, err := createBot(appConfig)
+	if err != nil {
+		onErrorFatal(err)
+	}
 
 	if err := recipeBot.Start(); err != nil {
-		graceFullyStopBotAndExit(recipeBot, err)
+		graceFullyStopBotAndFatal(recipeBot, err)
 	}
 
 	defer graceFullyStopBot(recipeBot)
@@ -32,15 +37,23 @@ func main() {
 	log.Println("Bot started")
 
 	if err := createMonitor(appConfig.MonitoringConfig).Monitor(); err != nil {
-		graceFullyStopBotAndExit(recipeBot, err)
+		graceFullyStopBotAndFatal(recipeBot, err)
 	}
 	listenInterrupt()
 }
 
-func createBot(botConfig *environment.RecipeBotConfig) bot.Bot {
+func createBot(env *environment.VarOrFileEnvironment) (bot.Bot, error) {
 	recipeBot := new(bot.RecipeBot)
-	recipeBot.Configure(botConfig)
-	return recipeBot
+	recipeBot.Configure(env.BotConfig)
+
+	dropbox := cloud.NewDropbox(env.DropboxConfig)
+	proc, err := urlProcessor.NewTiktokProc(env.TiktokProcConfig, dropbox)
+	if err != nil {
+		return nil, err
+	}
+	recipeBot.AddProcessor(proc)
+	return recipeBot, nil
+
 }
 
 func createMonitor(config *environment.SimpleActuatorConfig) monitoring.Monitor {
@@ -54,7 +67,7 @@ func graceFullyStopBot(bot bot.Bot) {
 	onErrorFatal(err)
 }
 
-func graceFullyStopBotAndExit(bot bot.Bot, original error) {
+func graceFullyStopBotAndFatal(bot bot.Bot, original error) {
 	err := bot.Stop()
 	onErrorFatal(errors.Join(original, err))
 }

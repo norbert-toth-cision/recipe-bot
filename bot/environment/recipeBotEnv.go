@@ -9,6 +9,8 @@ import (
 type VarOrFileEnvironment struct {
 	MonitoringConfig *SimpleActuatorConfig
 	BotConfig        *RecipeBotConfig
+	TiktokProcConfig *TiktokProcConfig
+	DropboxConfig    *DropboxConfig
 }
 
 func (e *VarOrFileEnvironment) ReadIn(file string) error {
@@ -21,6 +23,15 @@ func (e *VarOrFileEnvironment) ReadIn(file string) error {
 
 	e.BotConfig = new(RecipeBotConfig)
 	if err := e.BotConfig.Load(env); err != nil {
+		return err
+	}
+
+	e.TiktokProcConfig = new(TiktokProcConfig)
+	if err := e.TiktokProcConfig.Load(env); err != nil {
+		return err
+	}
+	e.DropboxConfig = new(DropboxConfig)
+	if err := e.DropboxConfig.Load(env); err != nil {
 		return err
 	}
 	return nil

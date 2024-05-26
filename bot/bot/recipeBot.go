@@ -6,6 +6,7 @@ import (
 	"github.com/bwmarrin/discordgo"
 	"log"
 	"recipebot/environment"
+	"recipebot/urlProcessor"
 	"recipebot/urlextract"
 )
 
@@ -14,12 +15,22 @@ const (
 )
 
 type RecipeBot struct {
-	config  *environment.RecipeBotConfig
-	session *discordgo.Session
+	config     *environment.RecipeBotConfig
+	session    *discordgo.Session
+	processors []urlProcessor.UrlProcessor
 }
 
-func (rb *RecipeBot) Configure(config *environment.RecipeBotConfig) {
+func (rb *RecipeBot) Configure(config *environment.RecipeBotConfig) *RecipeBot {
 	rb.config = config
+	return rb
+}
+
+func (rb *RecipeBot) AddProcessor(p urlProcessor.UrlProcessor) *RecipeBot {
+	if rb.processors == nil {
+		rb.processors = make([]urlProcessor.UrlProcessor, 0, 5)
+	}
+	rb.processors = append(rb.processors, p)
+	return rb
 }
 
 func (rb *RecipeBot) Start() error {
@@ -57,14 +68,29 @@ func (rb *RecipeBot) respondStatus(discord *discordgo.Session, message *discordg
 	for range count {
 		result := <-results
 		if result.UrlType != urlextract.NONE {
-			response += reportResult(result)
+			processed, err := rb.processUrl(result)
+			response += reportInitialResult(result, processed, err)
 		}
 	}
 	sendReport(discord, message.ChannelID, response)
 }
 
-func reportResult(result urlextract.WordResult) string {
-	return fmt.Sprintf("- %s: %s\n", result.UrlType, result.MatchedUrl.Hostname())
+func reportInitialResult(result urlextract.WordResult, processed *urlProcessor.Result, err error) string {
+	if err != nil {
+		return fmt.Sprintf("- %s: %s\n", result.MatchedUrl.Hostname(), err)
+	}
+	return fmt.Sprintf("- [%s](%s)\n", result.MatchedUrl.Hostname(), processed.StoredUrl)
+}
+
+func (rb *RecipeBot) processUrl(exUrl urlextract.WordResult) (*urlProcessor.Result, error) {
+	for _, processor := range rb.processors {
+		if processor.CanHandle(exUrl.UrlType) {
+			request := new(urlProcessor.Request)
+			request.Details = exUrl
+			return processor.Process(request)
+		}
+	}
+	return nil, fmt.Errorf("cannot process URL with type %s", exUrl.UrlType)
 }
 
 func sendReport(discord *discordgo.Session, channelId string, report string) {

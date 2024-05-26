@@ -3,13 +3,14 @@ module recipebot
 go 1.22.3
 
 require (
+	github.com/NightMan-1/go-dropy v0.0.0-20171009122849-8059af3032e6
 	github.com/bwmarrin/discordgo v0.28.1
-	github.com/rabbitmq/amqp091-go v1.10.0
 	github.com/spf13/cast v1.6.0
 	github.com/spf13/viper v1.18.2
 )
 
 require (
+	github.com/NightMan-1/go-dropbox v0.0.0-20160721110302-84931720dbf2 // indirect
 	github.com/fsnotify/fsnotify v1.7.0 // indirect
 	github.com/gorilla/websocket v1.4.2 // indirect
 	github.com/hashicorp/hcl v1.0.0 // indirect
@@ -18,10 +19,12 @@ require (
 	github.com/pelletier/go-toml/v2 v2.1.0 // indirect
 	github.com/sagikazarmark/locafero v0.4.0 // indirect
 	github.com/sagikazarmark/slog-shim v0.1.0 // indirect
+	github.com/segmentio/go-env v1.1.0 // indirect
 	github.com/sourcegraph/conc v0.3.0 // indirect
 	github.com/spf13/afero v1.11.0 // indirect
 	github.com/spf13/pflag v1.0.5 // indirect
 	github.com/subosito/gotenv v1.6.0 // indirect
+	github.com/tj/go-dropbox v0.0.0-20171107035848-42dd2be3662d // indirect
 	go.uber.org/atomic v1.9.0 // indirect
 	go.uber.org/multierr v1.9.0 // indirect
 	golang.org/x/crypto v0.16.0 // indirect
